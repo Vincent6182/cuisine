@@ -1,1022 +1,1463 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>ChronoChef IA — Assistant de Cuisson</title>
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- React & ReactDOM CDN -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <!-- Babel Standalone for JSX -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    body {
-      -webkit-tap-highlight-color: transparent;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    input[type="range"] {
-      accent-color: #f97316;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>ChronoChef</title>
+    <!-- Balises Apple Web App Plein Écran -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ChronoChef">
+    <style>
+        :root {
+            --bg-dark: #090e1a;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.78);
+            --text-muted: rgba(255, 255, 255, 0.42);
+            --accent-blue: #3898ff;
+            --accent-green: #34c759;
+            --accent-orange: #ff9f0a;
+            --accent-red: #ff453a;
+            --accent-purple: #bf5af2;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            background: radial-gradient(circle at 50% 0%, #17233b 0%, #090e1a 75%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            /* Marge haute sécurisée pour l'heure, Dynamic Island et batterie iOS */
+            padding-top: max(calc(env(safe-area-inset-top, 0px) + 14px), 52px);
+            padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 24px), 36px);
+            padding-left: 14px;
+            padding-right: 14px;
+            overflow-y: auto;
+        }
+
+        .phone-wrapper {
+            width: 100%;
+            max-width: 430px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* Barre supérieure : Sélecteur iOS + Bouton Clé IA */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 2px;
+        }
+
+        .picker {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            background: rgba(25, 38, 62, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 3px;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.4);
+        }
+
+        .picker button {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+            font-weight: 500;
+            padding: 7px 0;
+            border-radius: 17px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .picker button.active {
+            background: linear-gradient(180deg, rgba(75, 115, 165, 0.72) 0%, rgba(45, 75, 115, 0.72) 100%);
+            color: var(--text-primary);
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+        }
+
+        .key-btn {
+            background: rgba(25, 38, 62, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-secondary);
+            height: 36px;
+            padding: 0 11px;
+            border-radius: 18px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+        }
+
+        .key-btn.connected {
+            border-color: rgba(52, 199, 89, 0.45);
+            color: #4cd964;
+        }
+
+        /* Cartes Apple Glassmorphism avec Halos Colorés */
+        .card {
+            border-radius: 20px;
+            padding: 16px 18px;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .halo-blue {
+            background:
+                radial-gradient(circle at 85% 20%, rgba(56, 152, 255, 0.25) 0%, transparent 58%),
+                linear-gradient(145deg, rgba(35, 52, 82, 0.78) 0%, rgba(20, 30, 48, 0.88) 100%);
+        }
+
+        .halo-amber {
+            background:
+                radial-gradient(circle at 85% 50%, rgba(245, 135, 35, 0.38) 0%, rgba(205, 85, 20, 0.15) 50%, transparent 75%),
+                linear-gradient(145deg, rgba(48, 50, 68, 0.78) 0%, rgba(26, 28, 42, 0.88) 100%);
+        }
+
+        .halo-emerald {
+            background:
+                radial-gradient(circle at 82% 85%, rgba(46, 204, 113, 0.25) 0%, transparent 58%),
+                radial-gradient(circle at 15% 20%, rgba(65, 130, 210, 0.22) 0%, transparent 60%),
+                linear-gradient(145deg, rgba(34, 52, 78, 0.8) 0%, rgba(18, 29, 46, 0.9) 100%);
+        }
+
+        .halo-teal {
+            background:
+                radial-gradient(circle at 55% 95%, rgba(20, 175, 165, 0.28) 0%, transparent 62%),
+                linear-gradient(145deg, rgba(30, 48, 72, 0.8) 0%, rgba(18, 30, 46, 0.9) 100%);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 11px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: -0.2px;
+        }
+
+        .card-subtitle {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        /* Grille de pastilles d'ingrédients courts */
+        .cat-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--text-muted);
+            margin: 10px 0 6px 0;
+        }
+
+        .cat-label:first-of-type {
+            margin-top: 0;
+        }
+
+        .chips-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+
+        .chip {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-secondary);
+            padding: 7px 12px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .chip:active {
+            transform: scale(0.96);
+        }
+
+        .chip.selected {
+            background: linear-gradient(180deg, #3898ff 0%, #1d74d6 100%);
+            border-color: rgba(255, 255, 255, 0.35);
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 3px 10px rgba(56, 152, 255, 0.35);
+        }
+
+        .chip.selected-amber {
+            background: linear-gradient(180deg, #ff9f0a 0%, #d97d00 100%);
+            border-color: rgba(255, 255, 255, 0.35);
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 3px 10px rgba(255, 159, 10, 0.35);
+        }
+
+        /* Zone d'ajout d'aliment libre */
+        .add-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .ios-input {
+            flex: 1;
+            background: rgba(10, 16, 28, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 12px;
+            padding: 8px 12px;
+            color: #ffffff;
+            font-size: 13px;
+            outline: none;
+            user-select: text;
+        }
+
+        .ios-input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .ios-btn-small {
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 0 13px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        /* Curseur cranté de 1 en 1 style Apple */
+        .slider-block {
+            margin: 8px 0 4px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .slider-wrapper {
+            position: relative;
+            height: 32px;
+            display: flex;
+            align-items: center;
+        }
+
+        .custom-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.16);
+            outline: none;
+            position: relative;
+            z-index: 2;
+            cursor: pointer;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+        }
+
+        .custom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        .custom-slider::-webkit-slider-thumb:active {
+            transform: scale(1.13);
+        }
+
+        .slider-ticks {
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            right: 10px;
+            transform: translateY(-50%);
+            display: flex;
+            justify-content: space-between;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .tick {
+            width: 1.5px;
+            height: 13px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 1px;
+        }
+
+        .tick.major {
+            height: 17px;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.38);
+        }
+
+        /* Sélecteur de puissance Micro-ondes (300 / 600 / 900 / 1200W) */
+        .mw-power-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .mw-pill {
+            background: rgba(12, 18, 32, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-secondary);
+            padding: 7px 4px;
+            border-radius: 11px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mw-pill.active {
+            background: linear-gradient(180deg, #34c759 0%, #249f43 100%);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.35);
+            box-shadow: 0 3px 10px rgba(46, 184, 92, 0.35);
+        }
+
+        /* Bulles d'optimisation nutritionnelle et culinaire */
+        .advice-box {
+            background: rgba(255, 159, 10, 0.14);
+            border: 1px solid rgba(255, 159, 10, 0.35);
+            border-radius: 14px;
+            padding: 10px 12px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #ffd699;
+            margin-top: 10px;
+        }
+
+        .portion-bar {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(12, 18, 32, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 10px;
+        }
+
+        /* Affichage Grand Chiffre Central (Style Thermostat Apple) */
+        .big-number-wrap {
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            gap: 8px;
+            padding: 12px 0;
+        }
+
+        .big-number {
+            font-size: 50px;
+            font-weight: 700;
+            letter-spacing: -1.5px;
+            color: #ffffff;
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        }
+
+        /* Étapes de synchronisation chronologiques */
+        .timeline-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .step-card {
+            background: rgba(12, 18, 32, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 12px 14px;
+            transition: all 0.25s ease;
+        }
+
+        .step-card.done {
+            border-color: rgba(52, 199, 89, 0.5);
+            background: rgba(46, 184, 92, 0.14);
+        }
+
+        .step-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .step-time {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent-orange);
+            letter-spacing: -0.2px;
+        }
+
+        .step-badges {
+            display: flex;
+            gap: 5px;
+        }
+
+        .ustensil-badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+        }
+
+        .step-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 3px;
+        }
+
+        .step-desc {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.38;
+        }
+
+        /* Bouton d'action principal iOS */
+        .primary-btn {
+            width: 100%;
+            background: linear-gradient(180deg, #3898ff 0%, #1d74d6 100%);
+            border: none;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 12px;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(56, 152, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            transition: transform 0.15s ease;
+        }
+
+        .primary-btn:active {
+            transform: scale(0.98);
+        }
+
+        .secondary-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 10px 14px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .badge-green {
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(180deg, #34c759 0%, #249f43 100%);
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(46, 184, 92, 0.35);
+        }
+
+        /* Modal Clé API */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 8, 16, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen pb-10">
-  <div id="root"></div>
+<body>
 
-  <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
-
-    // Générateur de bip sonore Web Audio API (sans fichier externe)
-    const playBeep = (freq = 880, duration = 0.4, count = 3) => {
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioCtx();
-        for (let i = 0; i < count; i++) {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.5);
-          gain.gain.setValueAtTime(0.3, ctx.currentTime + i * 0.5);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.5 + duration);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(ctx.currentTime + i * 0.5);
-          osc.stop(ctx.currentTime + i * 0.5 + duration);
-        }
-      } catch (e) {
-        console.warn("Audio non supporté", e);
-      }
-    };
-
-    const formatTime = (sec) => {
-      const m = Math.floor(sec / 60);
-      const s = Math.round(sec % 60);
-      return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-    };
-
-    function App() {
-      const [activeTab, setActiveTab] = useState("egg");
-      const [apiKey, setApiKey] = useState(() => localStorage.getItem("chronochef_gemini_key") || "");
-      const [showApiModal, setShowApiModal] = useState(false);
-
-      const saveApiKey = (val) => {
-        setApiKey(val);
-        localStorage.setItem("chronochef_gemini_key", val);
-      };
-
-      // ========================
-      // MODULE 1 : OEUF PARFAIT
-      // ========================
-      const [eggState, setEggState] = useState("mollet");
-      const [eggSize, setEggSize] = useState("M");
-      const [eggTemp, setEggTemp] = useState("frigo");
-      const [eggCount, setEggCount] = useState(2);
-      const [eggTimer, setEggTimer] = useState(null);
-      const [eggRunning, setEggRunning] = useState(false);
-
-      const eggBaseTimes = {
-        coque: { S: 165, M: 185, L: 205, XL: 225, desc: "Blanc juste pris, jaune liquide chaud", tip: "Plonger dans l'eau frémissante. Écaler le chapeau immédiatement." },
-        mollet: { S: 330, M: 365, L: 395, XL: 425, desc: "Blanc ferme, jaune coulant et crémeux", tip: "Plonger dans l'eau bouillante, puis choc thermique dans l'eau glacée 2 min avant d'écaler." },
-        confit: { S: 420, M: 455, L: 490, XL: 525, desc: "Blanc ferme, jaune mi-cuit confit (Ramen)", tip: "Idéal pour salade ou plat : ne coule pas partout mais reste fondant." },
-        dur: { S: 540, M: 585, L: 630, XL: 675, desc: "Blanc et jaune fermes sans cerne gris", tip: "Eau frémissante, puis refroidir immédiatement à l'eau froide." },
-        plat: { S: 180, M: 195, L: 210, XL: 225, desc: "Cuisson poêle feu doux/moyen, jaune brillant", tip: "Beurre moussant, saler uniquement le blanc pour éviter de tacher le jaune." },
-        poche: { S: 165, M: 180, L: 200, XL: 220, desc: "Eau frémissante + vinaigre, tourbillon", tip: "Casser l'œuf dans un ramequin avant de le glisser au centre du tourbillon." },
-      };
-
-      const computeEggSeconds = () => {
-        let base = eggBaseTimes[eggState][eggSize];
-        if (eggTemp === "ambiant") base -= 25;
-        if (eggCount > 2 && eggState !== "plat") base += (eggCount - 2) * 8;
-        return Math.max(90, base);
-      };
-
-      const targetEggSec = computeEggSeconds();
-
-      useEffect(() => {
-        if (!eggRunning) return;
-        const interval = setInterval(() => {
-          setEggTimer((prev) => {
-            if (prev <= 1) {
-              clearInterval(interval);
-              setEggRunning(false);
-              playBeep(920, 0.4, 4);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        return () => clearInterval(interval);
-      }, [eggRunning]);
-
-      // =======================================
-      // MODULE 2 : COMBO MICRO-ONDES -> FOUR
-      // =======================================
-      const presetOvenItems = [
-        { id: "frites", name: "Frites au four", temp: 180, time: 20, crispy: true, state: "surgele" },
-        { id: "colin", name: "Filet de colin", temp: 210, time: 20, crispy: false, state: "surgele" },
-        { id: "cabillaud", name: "Dos de cabillaud", temp: 210, time: 28, crispy: false, state: "surgele" },
-        { id: "saumon_four", name: "Pavé de saumon", temp: 200, time: 18, crispy: false, state: "frais" },
-        { id: "nuggets", name: "Nuggets / Panés", temp: 200, time: 15, crispy: true, state: "surgele" },
-        { id: "gratin", name: "Gratin individuel", temp: 190, time: 25, crispy: false, state: "surgele" },
-      ];
-
-      const [selectedOvenItems, setSelectedOvenItems] = useState([
-        { ...presetOvenItems[0] },
-        { ...presetOvenItems[1] },
-        { ...presetOvenItems[2] },
-      ]);
-      const [customOvenName, setCustomOvenName] = useState("");
-      const [aiOvenAdvice, setAiOvenAdvice] = useState("");
-      const [aiOvenLoading, setAiOvenLoading] = useState(false);
-
-      const togglePresetOven = (preset) => {
-        const exists = selectedOvenItems.find((i) => i.id === preset.id);
-        if (exists) {
-          setSelectedOvenItems(selectedOvenItems.filter((i) => i.id !== preset.id));
-        } else {
-          setSelectedOvenItems([...selectedOvenItems, { ...preset }]);
-        }
-      };
-
-      const updateOvenItem = (id, field, value) => {
-        setSelectedOvenItems(
-          selectedOvenItems.map((item) => (item.id === id ? { ...item, [field]: value } : item))
-        );
-      };
-
-      const addCustomOvenItem = () => {
-        if (!customOvenName.trim()) return;
-        const lower = customOvenName.toLowerCase();
-        const isCrispy = lower.includes("frite") || lower.includes("pané") || lower.includes("croustill") || lower.includes("pizza") || lower.includes("nugget");
-        setSelectedOvenItems([
-          ...selectedOvenItems,
-          {
-            id: "custom_" + Date.now(),
-            name: customOvenName.trim(),
-            temp: 200,
-            time: 22,
-            crispy: isCrispy,
-            state: "surgele",
-          },
-        ]);
-        setCustomOvenName("");
-      };
-
-      const calculateOvenPlan = () => {
-        if (selectedOvenItems.length === 0) return null;
-        // Compromis de température pondéré
-        const avgTemp = selectedOvenItems.reduce((acc, i) => acc + i.temp, 0) / selectedOvenItems.length;
-        const targetTemp = Math.round(avgTemp / 5) * 5;
-
-        // Si un aliment croustillant (ex: frites) est présent, il fixe souvent la durée cible au four
-        const crispyItems = selectedOvenItems.filter((i) => i.crispy);
-        let commonOvenMinutes = 16;
-
-        if (crispyItems.length > 0) {
-          // Ajustement thermique de la durée de l'aliment croustillant à la nouvelle température
-          const ref = crispyItems[0];
-          const tempFactor = ref.temp / targetTemp;
-          commonOvenMinutes = Math.round(ref.time * tempFactor);
-        } else {
-          const minItem = selectedOvenItems.reduce((min, i) => (i.time < min.time ? i : min), selectedOvenItems[0]);
-          commonOvenMinutes = Math.max(12, Math.round(minItem.time * (minItem.temp / targetTemp) * 0.8));
-        }
-
-        const results = selectedOvenItems.map((item) => {
-          // Temps théorique nécessaire au four à targetTemp sans micro-ondes
-          const equivalentOvenMin = item.time * (item.temp / targetTemp);
-          const deficitMin = equivalentOvenMin - commonOvenMinutes;
-
-          if (item.crispy || deficitMin <= 1.5) {
-            return {
-              ...item,
-              mwSeconds: 0,
-              mwNote: item.crispy
-                ? "0 min (Interdit : ramollit l'amidon/panure)"
-                : "0 min (Directement au four)",
-            };
-          }
-
-          // 1 min de micro-ondes à 500-600W compense environ 3.2 min de four sur du poisson/plat
-          const rawMwSec = Math.round((deficitMin / 3.2) * 60);
-          const clampedMwSec = Math.min(300, Math.max(45, Math.round(rawMwSec / 15) * 15));
-
-          return {
-            ...item,
-            mwSeconds: clampedMwSec,
-            mwNote:
-              clampedMwSec >= 150
-                ? "À 500-600W · Retourner à mi-temps"
-                : "À 500-600W · Couvrir d'une cloche",
-          };
-        });
-
-        // Trier du plus long temps micro-ondes au plus court
-        results.sort((a, b) => b.mwSeconds - a.mwSeconds);
-
-        return { targetTemp, commonOvenMinutes, results };
-      };
-
-      const ovenPlan = calculateOvenPlan();
-
-      const askGeminiOven = async () => {
-        if (!apiKey) {
-          setShowApiModal(true);
-          return;
-        }
-        setAiOvenLoading(true);
-        setAiOvenAdvice("");
-        try {
-          const listStr = selectedOvenItems
-            .map((i) => `${i.name} (${i.state}, notice: ${i.temp}°C ${i.time}min)`)
-            .join(", ");
-          const prompt = `Tu es un expert culinaire pragmatique. Je veux cuire simultanément au four à la fin et préchauffer au micro-ondes avant : ${listStr}. Donne-moi en 4 puces ultra-concises (sans intro ni politesse) : 1) Température et durée commune au four, 2) Temps exact au micro-ondes (500-600W) pour chaque aliment avant d'enfourner, 3) L'ordre de passage, 4) Le point de vigilance texture.`;
-          const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-            }
-          );
-          const data = await res.json();
-          const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Erreur de réponse IA. Vérifie ta clé API.";
-          setAiOvenAdvice(txt);
-        } catch (err) {
-          setAiOvenAdvice("Impossible de joindre l'API Gemini. Vérifie ta connexion ou ta clé API.");
-        }
-        setAiOvenLoading(false);
-      };
-
-      // =======================================
-      // MODULE 3 : SYNCHRO TOP CHRONO (REPAS)
-      // =======================================
-      const [pastaMinutes, setPastaMinutes] = useState(9);
-      const [syncCombo, setSyncCombo] = useState("combo_saumon_epinards");
-      const [mergeMode, setMergeMode] = useState("incorporer");
-      const [customSyncIngredients, setCustomSyncIngredients] = useState("");
-      const [aiSyncResult, setAiSyncResult] = useState("");
-      const [aiSyncLoading, setAiSyncLoading] = useState(false);
-
-      // Chronomètre de synchronisation globale
-      const [syncRunning, setSyncRunning] = useState(false);
-      const [syncElapsed, setSyncElapsed] = useState(0);
-
-      const buildTimeline = () => {
-        const boilTime = 5; // 5 min pour faire bouillir l'eau des pâtes (avec couvercle/bouilloire)
-        const totalPastaTrack = boilTime + pastaMinutes;
-
-        let steps = [];
-
-        if (syncCombo === "combo_saumon_epinards") {
-          const totalDuration = Math.max(totalPastaTrack, 14);
-          steps = [
-            {
-              atMinFromStart: 0,
-              tMinus: totalDuration,
-              title: "Lancer l'eau des pâtes + Sortir le saumon du frigo",
-              detail: "Mettre une grande casserole d'eau salée à chauffer (couvercle dessus).",
-            },
-            {
-              atMinFromStart: totalDuration - (pastaMinutes + 2),
-              tMinus: pastaMinutes + 2,
-              title: "Lancer les pâtes aux épinards surgelées (Poêle ou Micro-ondes)",
-              detail: "À la poêle à feu doux avec 2 c.à.s d'eau à couvert (ou 4 min au micro-ondes à 600W).",
-            },
-            {
-              atMinFromStart: totalDuration - pastaMinutes,
-              tMinus: pastaMinutes,
-              title: `Plonger les pâtes sèches (${pastaMinutes} min) + Chauffer la poêle du saumon`,
-              detail: "L'eau bout : plonger les pâtes. Préchauffer la poêle du pavé de saumon à feu moyen-vif.",
-            },
-            {
-              atMinFromStart: totalDuration - 8,
-              tMinus: 8,
-              title: "Saisir le pavé de saumon côté peau (5 min)",
-              detail: "Poser côté peau dans la poêle chaude huilée. Ne pas toucher pendant 5 minutes.",
-            },
-            {
-              atMinFromStart: totalDuration - 3,
-              tMinus: 3,
-              title: "Retourner le saumon (3 min côté chair, feu doux)",
-              detail: "Baisser le feu pour garder le cœur nacré et moelleux.",
-            },
-            {
-              atMinFromStart: totalDuration - 1,
-              tMinus: 1,
-              title:
-                mergeMode === "incorporer"
-                  ? "Égoutter les pâtes (garder 2 c.à.s d'eau) et fusionner avec les épinards"
-                  : "Égoutter les pâtes et dresser à côté des épinards",
-              detail: "Mélanger 1 min à feu doux pour lier la sauce aux épinards sur toutes les pâtes.",
-            },
-            {
-              atMinFromStart: totalDuration,
-              tMinus: 0,
-              title: "Service immédiat : tout est chaud au même instant",
-              detail: "Poser le pavé de saumon sur le mélange pâtes / épinards.",
-            },
-          ];
-          return { totalDuration, steps: steps.sort((a, b) => a.atMinFromStart - b.atMinFromStart) };
-        }
-
-        if (syncCombo === "combo_eminces_julienne" || syncCombo === "combo_aiguillettes_julienne") {
-          const isAiguillettes = syncCombo === "combo_aiguillettes_julienne";
-          const chickenLabel = isAiguillettes ? "les aiguillettes de poulet" : "les émincés de poulet";
-          const chickenSearMin = isAiguillettes ? 5 : 4;
-          const julienneMin = 8;
-          const panTrack = chickenSearMin + julienneMin + 2; // Saisie poulet -> retrait -> julienne -> fusion
-          const totalDuration = Math.max(totalPastaTrack, panTrack);
-
-          steps = [
-            {
-              atMinFromStart: 0,
-              tMinus: totalDuration,
-              title: `Chauffer l'eau des pâtes + Sortir ${chickenLabel} du frigo`,
-              detail: "Saler l'eau et couvrir. Couper/préparer le poulet si besoin.",
-            },
-            {
-              atMinFromStart: totalDuration - panTrack,
-              tMinus: panTrack,
-              title: `Saisir ${chickenLabel} en premier dans la poêle bien chaude (${chickenSearMin} min)`,
-              detail: "IMPORTANT : Saisir le poulet AVANT la julienne surgelée pour le dorer sans qu'il bouille dans l'eau des légumes. Réserver dans une assiette.",
-            },
-            {
-              atMinFromStart: totalDuration - pastaMinutes,
-              tMinus: pastaMinutes,
-              title: `Plonger les pâtes dans l'eau bouillante (${pastaMinutes} min)`,
-              detail: "Remuer dès la première minute pour éviter que ça colle.",
-            },
-            {
-              atMinFromStart: totalDuration - (julienneMin + 2),
-              tMinus: julienneMin + 2,
-              title: `Lancer la julienne de légumes surgelée dans la même poêle (${julienneMin} min)`,
-              detail: "Feu moyen-vif à découvert les 4 premières minutes pour évaporer l'eau de décongélation.",
-            },
-            {
-              atMinFromStart: totalDuration - 2,
-              tMinus: 2,
-              title: `Remettre ${chickenLabel} dans la julienne de légumes`,
-              detail: "Le poulet reprend sa chaleur en 2 min avec les légumes sans sécher.",
-            },
-            {
-              atMinFromStart: totalDuration - 1,
-              tMinus: 1,
-              title:
-                mergeMode === "incorporer"
-                  ? "Égoutter les pâtes et les verser dans la poêle (Poulet + Julienne)"
-                  : "Égoutter les pâtes et servir avec la poêlée Poulet / Julienne",
-              detail: "Ajouter un filet d'huile d'olive ou crème/épices et mélanger 1 min sur le feu.",
-            },
-            {
-              atMinFromStart: totalDuration,
-              tMinus: 0,
-              title: "À table : Pâtes al dente, poulet moelleux et julienne fondante",
-              detail: "Tout arrive chaud à la minute près.",
-            },
-          ];
-          return { totalDuration, steps: steps.sort((a, b) => a.atMinFromStart - b.atMinFromStart) };
-        }
-
-        return { totalDuration: 15, steps: [] };
-      };
-
-      const timeline = buildTimeline();
-
-      useEffect(() => {
-        if (!syncRunning) return;
-        const interval = setInterval(() => {
-          setSyncElapsed((prev) => {
-            const next = prev + 1;
-            const totalSec = timeline.totalDuration * 60;
-            // Vérifier si une étape démarre exactement à cette seconde
-            timeline.steps.forEach((st) => {
-              if (Math.round(st.atMinFromStart * 60) === next) {
-                playBeep(780, 0.3, 2);
-              }
-            });
-            if (next >= totalSec) {
-              clearInterval(interval);
-              setSyncRunning(false);
-              playBeep(980, 0.5, 4);
-              return totalSec;
-            }
-            return next;
-          });
-        }, 1000);
-        return () => clearInterval(interval);
-      }, [syncRunning, timeline]);
-
-      const askGeminiSync = async () => {
-        if (!apiKey) {
-          setShowApiModal(true);
-          return;
-        }
-        if (!customSyncIngredients.trim()) return;
-        setAiSyncLoading(true);
-        setAiSyncResult("");
-        try {
-          const prompt = `Tu es un chef expert en ordonnancement de cuisine. Je veux synchroniser ces aliments pour que tout soit prêt et chaud exactement au même moment (T=0) : "${customSyncIngredients}". Mode souhaité : ${mergeMode}. Donne-moi uniquement le rétroplanning chronologique (T - X min -> T = 0) en liste à puces avec du gras sur les temps et les températures/feux. Zéro intro, zéro blabla.`;
-          const res = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-            }
-          );
-          const data = await res.json();
-          setAiSyncResult(data?.candidates?.[0]?.content?.parts?.[0]?.text || "Erreur IA.");
-        } catch (e) {
-          setAiSyncResult("Erreur de connexion à l'API Gemini.");
-        }
-        setAiSyncLoading(false);
-      };
-
-      return (
-        <div className="max-w-xl mx-auto px-4 pt-4">
-          {/* HEADER */}
-          <header className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                <span>⏱️</span> ChronoChef <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded-full font-semibold">IA</span>
-              </h1>
-              <p className="text-xs text-slate-400">Calculateur thermique & synchronisation sans saisie</p>
+    <div class="phone-wrapper">
+        <!-- Navigation style Apple Segmented Control -->
+        <div class="top-bar">
+            <div class="picker">
+                <button id="tab-btn-sync" class="active" onclick="switchTab('sync')">⏱️ Synchro</button>
+                <button id="tab-btn-oven" onclick="switchTab('oven')">🔥 MO➔Four</button>
+                <button id="tab-btn-egg" onclick="switchTab('egg')">🥚 Œufs</button>
             </div>
-            <button
-              onClick={() => setShowApiModal(true)}
-              className={`text-xs px-3 py-1.5 rounded-lg border transition ${
-                apiKey
-                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                  : "border-slate-700 bg-slate-900 text-slate-300 hover:border-orange-500"
-              }`}
-            >
-              {apiKey ? "✓ IA Connectée" : "⚙️ Clé API IA"}
-            </button>
-          </header>
-
-          {/* MODAL CLE API GEMINI */}
-          {showApiModal && (
-            <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-              <div className="bg-slate-900 border border-slate-700 rounded-2xl p-5 max-w-md w-full space-y-4">
-                <h2 className="text-base font-bold text-white">Connexion directe à Gemini IA (Optionnel)</h2>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Les 3 outils (Œufs, Micro-ondes/Four et tes 3 combos Pâtes/Saumon/Poulet/Julienne) fonctionnent <strong>100 % hors-ligne sans clé</strong>. Ajoute une clé API Google AI Studio uniquement si tu veux interroger l'IA sur des recettes libres inédites sur GitHub Pages.
-                </p>
-                <input
-                  type="password"
-                  placeholder="Coller ta clé API Gemini (AIzaSy...)"
-                  value={apiKey}
-                  onChange={(e) => saveApiKey(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-500"
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => setShowApiModal(false)}
-                    className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-4 py-2 rounded-xl"
-                  >
-                    Fermer & Enregistrer
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* NAVIGATION TABS */}
-          <div className="grid grid-cols-3 gap-1.5 bg-slate-900 p-1.5 rounded-2xl mb-5 border border-slate-800">
-            <button
-              onClick={() => setActiveTab("egg")}
-              className={`py-2.5 px-2 rounded-xl text-xs font-bold transition ${
-                activeTab === "egg" ? "bg-orange-500 text-white shadow" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              🥚 1. Œuf Parfait
-            </button>
-            <button
-              onClick={() => setActiveTab("oven")}
-              className={`py-2.5 px-2 rounded-xl text-xs font-bold transition ${
-                activeTab === "oven" ? "bg-orange-500 text-white shadow" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              🔥 2. MO ➔ Four
-            </button>
-            <button
-              onClick={() => setActiveTab("sync")}
-              className={`py-2.5 px-2 rounded-xl text-xs font-bold transition ${
-                activeTab === "sync" ? "bg-orange-500 text-white shadow" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              🍲 3. Top Synchro
-            </button>
-          </div>
-
-          {/* ========================================================== */}
-          {/* ONGLET 1 : OEUF PARFAIT                                     */}
-          {/* ========================================================== */}
-          {activeTab === "egg" && (
-            <div className="space-y-4">
-              {/* Choix de l'état (QCM) */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  1. État de cuisson souhaité
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: "coque", label: "À la coque", icon: "🥄" },
-                    { id: "mollet", label: "Mollet", icon: "🟠" },
-                    { id: "confit", label: "Mi-cuit / Ramen", icon: "🍜" },
-                    { id: "dur", label: "Dur", icon: "⚪" },
-                    { id: "plat", label: "Au plat", icon: "🍳" },
-                    { id: "poche", label: "Poché", icon: "💧" },
-                  ].map((st) => (
-                    <button
-                      key={st.id}
-                      onClick={() => {
-                        setEggState(st.id);
-                        setEggRunning(false);
-                        setEggTimer(null);
-                      }}
-                      className={`p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
-                        eggState === st.id
-                          ? "border-orange-500 bg-orange-500/15 text-white"
-                          : "border-slate-800 bg-slate-950 text-slate-300"
-                      }`}
-                    >
-                      <span className="text-lg">{st.icon}</span>
-                      <span className="text-xs font-bold mt-1">{st.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Calibre & Température (QCM) */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">2. Calibre</label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {["S", "M", "L", "XL"].map((sz) => (
-                      <button
-                        key={sz}
-                        onClick={() => {
-                          setEggSize(sz);
-                          setEggRunning(false);
-                          setEggTimer(null);
-                        }}
-                        className={`py-2 rounded-lg text-xs font-bold border ${
-                          eggSize === sz
-                            ? "border-orange-500 bg-orange-500 text-white"
-                            : "border-slate-800 bg-slate-950 text-slate-400"
-                        }`}
-                      >
-                        {sz}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400">3. Départ</label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {[
-                      { id: "frigo", label: "❄️ Frigo (4°)" },
-                      { id: "ambiant", label: "🏠 Ambiant" },
-                    ].map((tp) => (
-                      <button
-                        key={tp.id}
-                        onClick={() => {
-                          setEggTemp(tp.id);
-                          setEggRunning(false);
-                          setEggTimer(null);
-                        }}
-                        className={`py-2 px-1 rounded-lg text-xs font-bold border ${
-                          eggTemp === tp.id
-                            ? "border-orange-500 bg-orange-500 text-white"
-                            : "border-slate-800 bg-slate-950 text-slate-400"
-                        }`}
-                      >
-                        {tp.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Curseur Nombre d'oeufs */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
-                <div className="flex justify-between text-xs font-bold">
-                  <span className="text-slate-400 uppercase">4. Nombre d'œufs dans la casserole</span>
-                  <span className="text-orange-400">{eggCount} œuf(s)</span>
-                </div>
-                <input
-                  type="range"
-                  min="1"
-                  max="6"
-                  value={eggCount}
-                  onChange={(e) => {
-                    setEggCount(Number(e.target.value));
-                    setEggRunning(false);
-                    setEggTimer(null);
-                  }}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Résultat & Minuteur */}
-              <div className="bg-gradient-to-br from-orange-500/20 to-slate-900 border border-orange-500/40 rounded-2xl p-5 text-center space-y-3">
-                <div className="text-xs font-semibold text-orange-300 uppercase tracking-wider">
-                  {eggBaseTimes[eggState].desc}
-                </div>
-                <div className="text-5xl font-black tracking-tight text-white font-mono">
-                  {formatTime(eggTimer !== null ? eggTimer : targetEggSec)}
-                </div>
-                <p className="text-xs text-slate-300">{eggBaseTimes[eggState].tip}</p>
-                <div className="flex justify-center gap-3 pt-2">
-                  <button
-                    onClick={() => {
-                      if (eggTimer === null || eggTimer === 0) setEggTimer(targetEggSec);
-                      setEggRunning(!eggRunning);
-                    }}
-                    className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow"
-                  >
-                    {eggRunning ? "⏸ Pause" : "▶ Démarrer le minuteur"}
-                  </button>
-                  {eggTimer !== null && (
-                    <button
-                      onClick={() => {
-                        setEggRunning(false);
-                        setEggTimer(null);
-                      }}
-                      className="bg-slate-800 text-slate-300 text-xs font-bold px-4 py-2.5 rounded-xl"
-                    >
-                      Réinitialiser
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================== */}
-          {/* ONGLET 2 : COMBO MICRO-ONDES -> FOUR                        */}
-          {/* ========================================================== */}
-          {activeTab === "oven" && (
-            <div className="space-y-4">
-              {/* Sélection rapide en 1 clic */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  1. Coche tes aliments à cuire ensemble
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {presetOvenItems.map((preset) => {
-                    const active = selectedOvenItems.some((i) => i.id === preset.id);
-                    return (
-                      <button
-                        key={preset.id}
-                        onClick={() => togglePresetOven(preset)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
-                          active
-                            ? "border-orange-500 bg-orange-500/20 text-white"
-                            : "border-slate-800 bg-slate-950 text-slate-400"
-                        }`}
-                      >
-                        {active ? "✓ " : "+ "} {preset.name}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Ajout libre */}
-                <div className="flex gap-2 pt-2">
-                  <input
-                    type="text"
-                    placeholder="Autre aliment (ex: Pavé de biche, Lasagnes...)"
-                    value={customOvenName}
-                    onChange={(e) => setCustomOvenName(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500"
-                  />
-                  <button
-                    onClick={addCustomOvenItem}
-                    className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-3 py-2 rounded-xl"
-                  >
-                    + Ajouter
-                  </button>
-                </div>
-              </div>
-
-              {/* Curseurs par aliment sélectionné */}
-              {selectedOvenItems.length > 0 && (
-                <div className="space-y-2.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
-                    2. Ajuste les indications du paquet (Curseurs)
-                  </label>
-                  {selectedOvenItems.map((item) => (
-                    <div key={item.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-bold text-white">{item.name}</span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => updateOvenItem(item.id, "crispy", !item.crispy)}
-                            className={`text-[11px] px-2 py-0.5 rounded-md border ${
-                              item.crispy
-                                ? "border-amber-500/50 bg-amber-500/15 text-amber-300"
-                                : "border-slate-700 text-slate-400"
-                            }`}
-                          >
-                            {item.crispy ? "🍟 Doit croustiller (0 MO)" : "💧 Normal (MO OK)"}
-                          </button>
-                          <button
-                            onClick={() =>
-                              setSelectedOvenItems(selectedOvenItems.filter((i) => i.id !== item.id))
-                            }
-                            className="text-slate-500 hover:text-red-400 text-xs px-1"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <div className="flex justify-between text-slate-400 mb-1">
-                            <span>Temp. paquet</span>
-                            <span className="font-bold text-orange-400">{item.temp} °C</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="160"
-                            max="230"
-                            step="5"
-                            value={item.temp}
-                            onChange={(e) => updateOvenItem(item.id, "temp", Number(e.target.value))}
-                            className="w-full"
-                          />
-                        </div>
-                        <div>
-                          <div className="flex justify-between text-slate-400 mb-1">
-                            <span>Durée paquet</span>
-                            <span className="font-bold text-orange-400">{item.time} min</span>
-                          </div>
-                          <input
-                            type="range"
-                            min="8"
-                            max="45"
-                            step="1"
-                            value={item.time}
-                            onChange={(e) => updateOvenItem(item.id, "time", Number(e.target.value))}
-                            className="w-full"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Plan d'action calculé */}
-              {ovenPlan && (
-                <div className="bg-slate-900 border border-orange-500/40 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <div>
-                      <div className="text-xs text-orange-400 font-bold uppercase">Réglage Four Commun</div>
-                      <div className="text-2xl font-black text-white">
-                        {ovenPlan.targetTemp} °C <span className="text-sm font-normal text-slate-400">Chaleur tournante</span>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs text-orange-400 font-bold uppercase">Cuisson Finale</div>
-                      <div className="text-2xl font-black text-white">{ovenPlan.commonOvenMinutes} min</div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="text-xs font-bold text-slate-300 uppercase">
-                      Ordre de préchauffage au Micro-ondes (500-600 W) :
-                    </div>
-                    {ovenPlan.results.map((r, idx) => (
-                      <div
-                        key={r.id}
-                        className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs"
-                      >
-                        <div>
-                          <span className="font-bold text-white">
-                            {idx + 1}. {r.name}
-                          </span>
-                          <div className="text-[11px] text-slate-400">{r.mwNote}</div>
-                        </div>
-                        <div
-                          className={`font-mono font-bold px-2.5 py-1 rounded-lg ${
-                            r.mwSeconds > 0
-                              ? "bg-orange-500/20 text-orange-300"
-                              : "bg-slate-800 text-slate-400"
-                          }`}
-                        >
-                          {r.mwSeconds > 0 ? formatTime(r.mwSeconds) : "00:00"}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={askGeminiOven}
-                    disabled={aiOvenLoading}
-                    className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold py-2.5 rounded-xl text-orange-300 transition"
-                  >
-                    {aiOvenLoading ? "Analyse thermique Gemini en cours..." : "✨ Affiner avec Gemini IA (Aliment libre / sans notice)"}
-                  </button>
-
-                  {aiOvenAdvice && (
-                    <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">
-                      {aiOvenAdvice}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ========================================================== */}
-          {/* ONGLET 3 : SYNCHRO TOP CHRONO                               */}
-          {/* ========================================================== */}
-          {activeTab === "sync" && (
-            <div className="space-y-4">
-              {/* Combos favoris en 1 clic */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  1. Choisis ton plat à synchroniser (1 clic)
-                </label>
-                <div className="space-y-2">
-                  {[
-                    {
-                      id: "combo_saumon_epinards",
-                      title: "🐟 Pâtes + Pâtes aux épinards (surgelées) + Pavé de saumon (frigo)",
-                    },
-                    {
-                      id: "combo_eminces_julienne",
-                      title: "🍗 Pâtes + Émincés de poulet (frigo) + Julienne de légumes (surgelée)",
-                    },
-                    {
-                      id: "combo_aiguillettes_julienne",
-                      title: "🍗 Pâtes + Aiguillettes de poulet (frigo) + Julienne de légumes (surgelée)",
-                    },
-                  ].map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => {
-                        setSyncCombo(c.id);
-                        setSyncRunning(false);
-                        setSyncElapsed(0);
-                      }}
-                      className={`w-full text-left p-3 rounded-xl border text-xs font-bold transition ${
-                        syncCombo === c.id
-                          ? "border-orange-500 bg-orange-500/15 text-white"
-                          : "border-slate-800 bg-slate-950 text-slate-300"
-                      }`}
-                    >
-                      {c.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Curseur temps des pâtes & Mode d'incorporation */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-                <div className="flex justify-between text-xs font-bold">
-                  <span className="text-slate-400 uppercase">2. Temps paquet des pâtes sèches</span>
-                  <span className="text-orange-400">{pastaMinutes} min</span>
-                </div>
-                <input
-                  type="range"
-                  min="3"
-                  max="14"
-                  value={pastaMinutes}
-                  onChange={(e) => {
-                    setPastaMinutes(Number(e.target.value));
-                    setSyncRunning(false);
-                    setSyncElapsed(0);
-                  }}
-                  className="w-full"
-                />
-
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    onClick={() => setMergeMode("incorporer")}
-                    className={`py-2 rounded-xl text-xs font-bold border ${
-                      mergeMode === "incorporer"
-                        ? "border-orange-500 bg-orange-500 text-white"
-                        : "border-slate-800 bg-slate-950 text-slate-400"
-                    }`}
-                  >
-                    🍲 Tout incorporer à la fin
-                  </button>
-                  <button
-                    onClick={() => setMergeMode("separe")}
-                    className={`py-2 rounded-xl text-xs font-bold border ${
-                      mergeMode === "separe"
-                        ? "border-orange-500 bg-orange-500 text-white"
-                        : "border-slate-800 bg-slate-950 text-slate-400"
-                    }`}
-                  >
-                    🍽️ Servir séparément
-                  </button>
-                </div>
-              </div>
-
-              {/* Chronomètre & Séquenceur */}
-              <div className="bg-slate-900 border border-orange-500/40 rounded-2xl p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs font-bold text-orange-400 uppercase">Durée totale synchronisation</div>
-                    <div className="text-2xl font-black text-white font-mono">
-                      {formatTime(timeline.totalDuration * 60 - syncElapsed)}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setSyncRunning(!syncRunning)}
-                      className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl"
-                    >
-                      {syncRunning ? "⏸ Pause" : "▶ Lancer Top Chrono"}
-                    </button>
-                    {syncElapsed > 0 && (
-                      <button
-                        onClick={() => {
-                          setSyncRunning(false);
-                          setSyncElapsed(0);
-                        }}
-                        className="bg-slate-800 text-slate-300 text-xs font-bold px-3 py-2.5 rounded-xl"
-                      >
-                        ↺
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Liste chronologique des étapes */}
-                <div className="space-y-2.5">
-                  {timeline.steps.map((st, i) => {
-                    const stepSec = st.atMinFromStart * 60;
-                    const isDone = syncElapsed >= stepSec && syncElapsed > 0;
-                    return (
-                      <div
-                        key={i}
-                        className={`p-3 rounded-xl border text-xs transition ${
-                          isDone
-                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
-                            : "border-slate-800 bg-slate-950 text-slate-200"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between font-bold mb-1">
-                          <span className="text-orange-400 font-mono">
-                            Départ +{st.atMinFromStart} min (T - {st.tMinus} min)
-                          </span>
-                          {isDone && <span className="text-emerald-400">✓ Actif / Fait</span>}
-                        </div>
-                        <div className="font-bold text-white text-sm">{st.title}</div>
-                        <div className="text-slate-400 mt-0.5">{st.detail}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Synchronisation libre via Gemini */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  ✨ Autre combinaison libre (Calculée par Gemini IA)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Ex: Riz basmati 11min + Crevettes surgelées + Brocolis..."
-                    value={customSyncIngredients}
-                    onChange={(e) => setCustomSyncIngredients(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500"
-                  />
-                  <button
-                    onClick={askGeminiSync}
-                    disabled={aiSyncLoading}
-                    className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl"
-                  >
-                    {aiSyncLoading ? "..." : "Calculer"}
-                  </button>
-                </div>
-                {aiSyncResult && (
-                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">
-                    {aiSyncResult}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+            <button id="api-key-btn" class="key-btn" onclick="toggleModal(true)">⚙️ IA</button>
         </div>
-      );
-    }
 
-    const root = ReactDOM.createRoot(document.getElementById("root"));
-    root.render(<App />);
-  </script>
+        <!-- ======================================================= -->
+        <!-- ONGLET 1 : SYNCHRONISATION PAR INGRÉDIENTS (1 CASSEROLE + 1 POÊLE + MO) -->
+        <!-- ======================================================= -->
+        <div id="view-sync" class="tab-view" style="display: flex; flex-direction: column; gap: 14px;">
+
+            <!-- CARTE SÉLECTEUR D'INGRÉDIENTS -->
+            <div class="card halo-blue">
+                <div class="card-header">
+                    <div class="card-title">🥗 Ingrédients du repas</div>
+                    <span class="card-subtitle" id="sync-count-label">4 sélectionnés</span>
+                </div>
+
+                <div class="cat-label">Féculents (1 Casserole)</div>
+                <div class="chips-grid" id="chips-starch"></div>
+
+                <!-- Curseur cranté durée Féculent -->
+                <div class="slider-block" style="margin-top: 10px;">
+                    <div style="display:flex; justify-content:space-between; font-size:13px;">
+                        <span style="color:var(--text-secondary);">Cuisson eau bouillante</span>
+                        <span id="starch-time-val" style="font-weight:600; color:#fff;">8 min</span>
+                    </div>
+                    <div class="slider-wrapper">
+                        <input type="range" id="starch-slider" class="custom-slider" min="3" max="15" step="1" value="8">
+                        <div class="slider-ticks" id="starch-ticks"></div>
+                    </div>
+                </div>
+
+                <div class="cat-label">Protéines (Micro-ondes ou Poêle)</div>
+                <div class="chips-grid" id="chips-protein"></div>
+
+                <div class="cat-label">Légumes & Garnitures (1 Poêle)</div>
+                <div class="chips-grid" id="chips-veg"></div>
+
+                <div class="cat-label">Liants & Sauces</div>
+                <div class="chips-grid" id="chips-sauce"></div>
+
+                <!-- Zone d'ajout d'un nouvel aliment -->
+                <div class="add-row">
+                    <input type="text" id="new-ing-input" class="ios-input" placeholder="Nouvel aliment (ex: Brocolis, Cabillaud...)">
+                    <button class="ios-btn-small" onclick="addCustomIngredient()">+ Ajouter</button>
+                </div>
+
+                <!-- Alertes d'arbitrage culinaire automatiques -->
+                <div id="culinary-alerts"></div>
+            </div>
+
+            <!-- CARTE RÉGLAGE MICRO-ONDES (S'affiche si le Saumon est sélectionné) -->
+            <div class="card halo-teal" id="salmon-mw-card">
+                <div class="card-header">
+                    <div class="card-title">📡 Saumon Vapeur Micro-ondes</div>
+                    <span class="badge-green">Préserve les Oméga-3</span>
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); line-height: 1.4;">
+                    Libère ton unique poêle pour la julienne et la crème. Pour <strong>250 g en 2 morceaux</strong> : place le grand (150 g) vers l'extérieur et le petit (100 g enfant) au centre + <strong>1 c.à.s d'eau sous cloche</strong>.
+                </div>
+                <div class="mw-power-grid">
+                    <div class="mw-pill" onclick="selectMwPower(300)" id="mw-300">300 W<br><span style="font-size:10px; font-weight:400;">Décong.</span></div>
+                    <div class="mw-pill active" onclick="selectMwPower(600)" id="mw-600">600 W<br><span style="font-size:10px; font-weight:400;">2m30 · Idéal</span></div>
+                    <div class="mw-pill" onclick="selectMwPower(900)" id="mw-900">900 W<br><span style="font-size:10px; font-weight:400;">1m30 · Vif</span></div>
+                    <div class="mw-pill" onclick="selectMwPower(1200)" id="mw-1200">1200 W<br><span style="font-size:10px; font-weight:400;">1m00 · Max</span></div>
+                </div>
+                <div class="portion-bar">
+                    <span>👦 Enfant (9 ans) : <strong>90-100 g</strong></span>
+                    <span>🧑 Adulte : <strong>150 g</strong></span>
+                </div>
+            </div>
+
+            <!-- CARTE CHRONOMÈTRE & SYNCHRONISATION -->
+            <div class="card halo-emerald">
+                <div class="card-header">
+                    <div class="card-title">⏱️ Plan de Synchronisation</div>
+                    <span class="card-subtitle" id="sync-total-badge">14 min chrono</span>
+                </div>
+
+                <div class="big-number-wrap">
+                    <div class="big-number" id="sync-timer-display">14:00</div>
+                </div>
+
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <button class="primary-btn" id="sync-start-btn" onclick="toggleSyncTimer()">▶ Lancer Top Chrono</button>
+                    <button class="secondary-btn" onclick="resetSyncTimer()">↺</button>
+                </div>
+
+                <div class="timeline-list" id="sync-timeline"></div>
+
+                <!-- Bouton IA si aliments personnalisés complexes -->
+                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
+                    <button class="secondary-btn" style="width:100%;" onclick="askGeminiCustomSync()" id="ai-sync-btn">
+                        ✨ Adapter avec Gemini IA (Ingrédients libres)
+                    </button>
+                    <div id="ai-sync-output" class="advice-box hidden" style="margin-top:8px; color:#fff; border-color:rgba(56,152,255,0.4); background:rgba(56,152,255,0.12); white-space:pre-wrap;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- ONGLET 2 : COMBO MICRO-ONDES -> FOUR                     -->
+        <!-- ======================================================= -->
+        <div id="view-oven" class="tab-view hidden" style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="card halo-amber">
+                <div class="card-header">
+                    <div class="card-title">🔥 Aliments à enfourner ensemble</div>
+                    <span class="card-subtitle">Préchauffage MO 600 W</span>
+                </div>
+
+                <div class="chips-grid" id="oven-chips"></div>
+
+                <div class="add-row">
+                    <input type="text" id="oven-new-input" class="ios-input" placeholder="Autre (ex: Lasagnes, Pavé cabillaud...)">
+                    <button class="ios-btn-small" onclick="addOvenCustom()">+ Ajouter</button>
+                </div>
+            </div>
+
+            <!-- Liste des curseurs par aliment sélectionné -->
+            <div id="oven-sliders-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
+
+            <!-- Résultat Four + Micro-ondes 600W -->
+            <div class="card halo-emerald" id="oven-result-card">
+                <div class="card-header">
+                    <div class="card-title">🎯 Réglage Commun</div>
+                    <span class="badge-green">Micro-ondes 600 W</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; text-align: center; padding: 8px 0 14px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Four Chaleur Tournante</div>
+                        <div class="big-number" id="oven-target-temp" style="font-size: 42px; margin-top: 4px;">200°C</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Durée Commune</div>
+                        <div class="big-number" id="oven-target-time" style="font-size: 42px; margin-top: 4px;">16 min</div>
+                    </div>
+                </div>
+
+                <div class="timeline-list" id="oven-steps-list" style="margin-top: 12px;"></div>
+            </div>
+        </div>
+
+        <!-- ======================================================= -->
+        <!-- ONGLET 3 : OEUF PARFAIT                                  -->
+        <!-- ======================================================= -->
+        <div id="view-egg" class="tab-view hidden" style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="card halo-amber">
+                <div class="card-header">
+                    <div class="card-title">🥚 Texture & Calibre</div>
+                    <span class="card-subtitle" id="egg-temp-label">Départ Frigo (4°C)</span>
+                </div>
+
+                <div class="chips-grid" id="egg-state-chips"></div>
+
+                <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; margin-top: 14px;">
+                    <div class="picker" style="width: 100%; grid-template-columns: repeat(4, 1fr);">
+                        <button onclick="setEggSize('S')" id="egg-sz-S">S</button>
+                        <button onclick="setEggSize('M')" id="egg-sz-M" class="active">M</button>
+                        <button onclick="setEggSize('L')" id="egg-sz-L">L</button>
+                        <button onclick="setEggSize('XL')" id="egg-sz-XL">XL</button>
+                    </div>
+                    <div class="picker" style="width: 100%; grid-template-columns: 1fr 1fr;">
+                        <button onclick="setEggOrigin('frigo')" id="egg-orig-frigo" class="active">❄️ Frigo</button>
+                        <button onclick="setEggOrigin('ambiant')" id="egg-orig-ambiant">🏠 Amb.</button>
+                    </div>
+                </div>
+
+                <div class="slider-block" style="margin-top: 14px;">
+                    <div style="display:flex; justify-content:space-between; font-size:13px;">
+                        <span style="color:var(--text-secondary);">Nombre d'œufs</span>
+                        <span id="egg-count-val" style="font-weight:600;">2 œufs</span>
+                    </div>
+                    <div class="slider-wrapper">
+                        <input type="range" id="egg-count-slider" class="custom-slider" min="1" max="6" step="1" value="2">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card halo-emerald" style="text-align: center;">
+                <div class="card-header">
+                    <div class="card-title" id="egg-result-title">Œuf Mollet</div>
+                    <span class="badge-green">Précision Seconde</span>
+                </div>
+                <div class="big-number-wrap">
+                    <div class="big-number" id="egg-timer-display">06:05</div>
+                </div>
+                <div id="egg-tip-text" style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+                    Plonger dans l'eau bouillante, puis choc thermique dans l'eau glacée 2 min.
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="primary-btn" id="egg-start-btn" onclick="toggleEggTimer()">▶ Démarrer Minuteur</button>
+                    <button class="secondary-btn" onclick="resetEggTimer()">↺</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CLÉ API GEMINI -->
+    <div class="modal-backdrop" id="api-modal">
+        <div class="card halo-blue" style="max-width: 380px; width: 100%;">
+            <div class="card-header">
+                <div class="card-title">🔑 Clé API Gemini (Optionnel)</div>
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.45; margin-bottom: 12px;">
+                Tous tes ingrédients, le saumon au micro-ondes (300/600/900/1200 W) et le four fonctionnent <strong>100 % hors-ligne sans clé</strong>. Ajoute ta clé uniquement pour analyser des ingrédients inédits via Gemini.
+            </p>
+            <input type="password" id="api-key-input" class="ios-input" style="width: 100%; margin-bottom: 12px;" placeholder="AIzaSy...">
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                <button class="secondary-btn" onclick="toggleModal(false)">Fermer</button>
+                <button class="primary-btn" style="width: auto; padding: 10px 18px;" onclick="saveApiKey()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // AUDIO BIP (Web Audio API natif iOS)
+        // =========================================================
+        function playChime(freq = 880, count = 3) {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                const ctx = new AudioCtx();
+                for (let i = 0; i < count; i++) {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.42);
+                    gain.gain.setValueAtTime(0.28, ctx.currentTime + i * 0.42);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.42 + 0.35);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + i * 0.42);
+                    osc.stop(ctx.currentTime + i * 0.42 + 0.35);
+                }
+            } catch (e) {}
+        }
+
+        function formatMMSS(totalSec) {
+            const s = Math.max(0, Math.round(totalSec));
+            const m = Math.floor(s / 60);
+            const rem = s % 60;
+            return `${String(m).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
+        }
+
+        function updateRangeFill(sliderEl) {
+            const min = parseFloat(sliderEl.min);
+            const max = parseFloat(sliderEl.max);
+            const val = parseFloat(sliderEl.value);
+            const pct = ((val - min) / (max - min)) * 100;
+            sliderEl.style.background = `linear-gradient(to right, #3898ff 0%, #3898ff ${pct}%, rgba(255, 255, 255, 0.16) ${pct}%, rgba(255, 255, 255, 0.16) 100%)`;
+        }
+
+        // =========================================================
+        // NAVIGATION ENTRE LES 3 ONGLETS
+        // =========================================================
+        function switchTab(tab) {
+            ['sync', 'oven', 'egg'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.toggle('hidden', t !== tab);
+                document.getElementById(`tab-btn-${t}`).classList.toggle('active', t === tab);
+            });
+        }
+
+        // =========================================================
+        // GESTION CLÉ API GEMINI (localStorage)
+        // =========================================================
+        let geminiKey = localStorage.getItem('chronochef_gemini_key') || '';
+        function refreshKeyStatus() {
+            const btn = document.getElementById('api-key-btn');
+            btn.classList.toggle('connected', Boolean(geminiKey));
+            btn.textContent = geminiKey ? '✓ IA' : '⚙️ IA';
+            document.getElementById('api-key-input').value = geminiKey;
+        }
+        function toggleModal(open) {
+            document.getElementById('api-modal').classList.toggle('open', open);
+        }
+        function saveApiKey() {
+            geminiKey = document.getElementById('api-key-input').value.trim();
+            localStorage.setItem('chronochef_gemini_key', geminiKey);
+            refreshKeyStatus();
+            toggleModal(false);
+        }
+
+        // =========================================================
+        // ONGLET 1 : SYNCHRONISATION PAR INGRÉDIENTS
+        // =========================================================
+        const defaultIngredients = [
+            // Féculents
+            { id: 'coquillettes', label: 'Coquillettes', cat: 'starch', defaultMin: 8 },
+            { id: 'pates', label: 'Pâtes', cat: 'starch', defaultMin: 9 },
+            { id: 'riz', label: 'Riz', cat: 'starch', defaultMin: 11 },
+            // Protéines
+            { id: 'saumon', label: 'Pavé saumon', cat: 'protein' },
+            { id: 'eminces', label: 'Émincés poulet', cat: 'protein' },
+            { id: 'aiguillettes', label: 'Aiguillettes', cat: 'protein' },
+            { id: 'oeuf_plat', label: 'Œuf poêle', cat: 'protein' },
+            // Légumes
+            { id: 'julienne', label: 'Julienne surg.', cat: 'veg' },
+            { id: 'champignons', label: 'Champignons', cat: 'veg' },
+            { id: 'epinards', label: 'Épinards surg.', cat: 'veg' },
+            { id: 'courgette', label: 'Courgette', cat: 'veg' },
+            // Sauces & Liants
+            { id: 'creme', label: 'Crème liquide', cat: 'sauce' },
+            { id: 'tomate', label: 'Sauce tomate', cat: 'sauce' }
+        ];
+
+        let customIngs = JSON.parse(localStorage.getItem('chronochef_custom_ings') || '[]');
+        // Sélection par défaut correspondant à la recette validée (Coquillettes + Saumon + Julienne Picard + Champignons + Crème)
+        let selectedSyncIds = ['coquillettes', 'saumon', 'julienne', 'champignons', 'creme'];
+        let starchMinutes = 8;
+        let mwPower = 600; // 300, 600, 900, 1200
+
+        function getAllIngredients() {
+            return [...defaultIngredients, ...customIngs];
+        }
+
+        function renderSyncChips() {
+            const cats = { starch: 'chips-starch', protein: 'chips-protein', veg: 'chips-veg', sauce: 'chips-sauce' };
+            Object.values(cats).forEach(id => document.getElementById(id).innerHTML = '');
+
+            getAllIngredients().forEach(item => {
+                const container = document.getElementById(cats[item.cat] || 'chips-veg');
+                const btn = document.createElement('button');
+                const isSel = selectedSyncIds.includes(item.id);
+                btn.className = `chip ${isSel ? 'selected' : ''}`;
+                btn.textContent = item.label;
+                btn.onclick = () => toggleSyncIng(item);
+                container.appendChild(btn);
+            });
+
+            document.getElementById('sync-count-label').textContent = `${selectedSyncIds.length} sélectionné(s)`;
+            document.getElementById('salmon-mw-card').classList.toggle('hidden', !selectedSyncIds.includes('saumon'));
+        }
+
+        function toggleSyncIng(item) {
+            const idx = selectedSyncIds.indexOf(item.id);
+            if (idx >= 0) {
+                selectedSyncIds.splice(idx, 1);
+            } else {
+                selectedSyncIds.push(item.id);
+                if (item.cat === 'starch' && item.defaultMin) {
+                    starchMinutes = item.defaultMin;
+                    const slider = document.getElementById('starch-slider');
+                    slider.value = starchMinutes;
+                    document.getElementById('starch-time-val').textContent = `${starchMinutes} min`;
+                    updateRangeFill(slider);
+                }
+            }
+            if (navigator.vibrate) navigator.vibrate(5);
+            resetSyncTimer();
+            renderSyncChips();
+            buildSyncPlan();
+        }
+
+        function addCustomIngredient() {
+            const input = document.getElementById('new-ing-input');
+            const name = input.value.trim();
+            if (!name) return;
+            const newItem = {
+                id: 'cust_' + Date.now(),
+                label: name.length > 18 ? name.substring(0, 18) + '…' : name,
+                cat: 'veg'
+            };
+            customIngs.push(newItem);
+            localStorage.setItem('chronochef_custom_ings', JSON.stringify(customIngs));
+            selectedSyncIds.push(newItem.id);
+            input.value = '';
+            renderSyncChips();
+            buildSyncPlan();
+        }
+
+        function selectMwPower(w) {
+            mwPower = w;
+            [300, 600, 900, 1200].forEach(p => {
+                document.getElementById(`mw-${p}`).classList.toggle('active', p === w);
+            });
+            if (navigator.vibrate) navigator.vibrate(5);
+            resetSyncTimer();
+            buildSyncPlan();
+        }
+
+        // Calcul intelligent de la chronologie (1 Casserole + 1 Poêle + Micro-ondes)
+        let currentTimeline = { totalMin: 15, steps: [] };
+
+        function buildSyncPlan() {
+            const has = (id) => selectedSyncIds.includes(id);
+            const alertsEl = document.getElementById('culinary-alerts');
+            const alerts = [];
+
+            // Règles d'arbitrage issues des échanges
+            const starches = ['coquillettes', 'pates', 'riz'].filter(has);
+            if (starches.length > 1) {
+                alerts.push("💡 <strong>Doublon féculents :</strong> Garde uniquement les coquillettes ou pâtes (elles accrochent mieux la sauce crémeuse que le riz).");
+            }
+            if (has('saumon') && has('creme') && has('tomate')) {
+                alerts.push("💡 <strong>Accord sauce :</strong> Écarte la sauce tomate (son acidité écrase le saumon et tranche avec la crème liquide).");
+            }
+            if (has('julienne') && has('courgette')) {
+                alerts.push("💡 <strong>Gain de temps :</strong> La julienne surgelée seule couvre 100 % des fibres. Écarte la courgette pour éviter la découpe et l'excès d'eau dans la sauce.");
+            }
+
+            alertsEl.innerHTML = alerts.map(a => `<div class="advice-box">${a}</div>`).join('');
+
+            // Paramètres de cuisson
+            const boilWaterMin = 5;
+            const hasStarch = starches.length > 0;
+            const starchName = has('coquillettes') ? 'les coquillettes' : (has('riz') ? 'le riz' : 'les pâtes');
+
+            const hasChicken = has('eminces') || has('aiguillettes');
+            const chickenName = has('aiguillettes') ? 'les aiguillettes de poulet' : 'les émincés de poulet';
+            const chickenMin = has('aiguillettes') ? 5 : 4;
+
+            const hasJulienne = has('julienne');
+            const hasMushrooms = has('champignons');
+            const hasSpinach = has('epinards');
+            const hasCream = has('creme');
+            const hasTomato = has('tomate') && !hasCream;
+            const hasSalmon = has('saumon');
+
+            // Durée Micro-ondes Saumon (250g en 2 morceaux) + 1m30 de repos obligatoire
+            const mwConfig = {
+                300: { cookSec: 240, restSec: 90, label: "4 min à 300 W + 1 min 30 de repos" },
+                600: { cookSec: 150, restSec: 90, label: "2 min 30 à 600 W + 1 min 30 de repos" },
+                900: { cookSec: 90,  restSec: 90, label: "1 min 30 à 900 W + 1 min 30 de repos" },
+                1200:{ cookSec: 60,  restSec: 90, label: "1 min 00 à 1200 W + 1 min 30 de repos" }
+            }[mwPower];
+
+            const salmonTotalMin = Math.round(((mwConfig.cookSec + mwConfig.restSec) / 60) * 2) / 2; // ex: 4 min à 600W, 3 min à 900W
+
+            // Durée de la piste Poêle
+            let panMin = 0;
+            if (hasJulienne || hasMushrooms || has('courgette')) panMin = 9;
+            else if (hasSpinach) panMin = 6;
+            if (hasChicken) panMin += chickenMin + 1;
+
+            const casseroleTotalMin = hasStarch ? (boilWaterMin + starchMinutes) : 0;
+            const totalMin = Math.max(casseroleTotalMin, panMin, hasSalmon ? salmonTotalMin + 2 : 8, 10);
+
+            const steps = [];
+
+            // T = 0 : Mise en place
+            const prepTasks = [];
+            if (hasStarch) prepTasks.push("Mets un grand volume d'eau salée à bouillir à couvert");
+            if (hasMushrooms) prepTasks.push("émince les champignons (2 min)");
+            if (hasSalmon) prepTasks.push("place les 2 pavés (150 g extérieur + 100 g centre) dans une assiette creuse avec 1 c.à.s d'eau sous cloche");
+
+            steps.push({
+                atMin: 0,
+                ustensils: ['Préparation'],
+                title: "Mise en place & Chauffe de l'eau",
+                desc: prepTasks.length ? prepTasks.join(", ") + "." : "Prépare tes ingrédients sur le plan de travail."
+            });
+
+            // Saisie du poulet en premier dans la poêle (si poulet sélectionné)
+            if (hasChicken) {
+                const startChicken = Math.max(1, totalMin - panMin);
+                steps.push({
+                    atMin: startChicken,
+                    ustensils: ['Poêle unique'],
+                    title: `Saisir ${chickenName} en premier (${chickenMin} min)`,
+                    desc: "Dore le poulet à feu vif dans la poêle chaude avant les légumes surgelés (sinon il bouillira dans leur eau). Réserve-le dans une assiette."
+                });
+            }
+
+            // Plonger les féculents dans la casserole
+            if (hasStarch) {
+                const startStarch = Math.max(1, totalMin - starchMinutes - 1);
+                steps.push({
+                    atMin: startStarch,
+                    ustensils: ['Casserole'],
+                    title: `L'eau bout : plonger ${starchName} (${starchMinutes} min)`,
+                    desc: "Cuisson seule dans l'eau bouillante (ne jamais y jeter la julienne surgelée pour ne pas casser l'ébullition)."
+                });
+            }
+
+            // Cuisson des légumes (Julienne Picard / Champignons / Épinards) dans la poêle
+            if (hasJulienne || hasMushrooms || hasSpinach || has('courgette')) {
+                const vegMin = (hasJulienne || hasMushrooms) ? 9 : 6;
+                const startVeg = Math.max(1, totalMin - vegMin - 1);
+                const vegNames = [
+                    hasJulienne ? 'la julienne surgelée' : null,
+                    hasMushrooms ? 'les champignons' : null,
+                    hasSpinach ? 'les épinards surgelés' : null,
+                    has('courgette') && !hasJulienne ? 'la courgette en petits dés' : null
+                ].filter(Boolean).join(' + ');
+
+                steps.push({
+                    atMin: startVeg,
+                    ustensils: ['Poêle unique'],
+                    title: `Lancer ${vegNames} à feu moyen-vif`,
+                    desc: hasJulienne
+                        ? "IMPORTANT : Cuire sans couvercle les 5 premières minutes en remuant pour évaporer totalement l'eau de congélation."
+                        : "Fais revenir à feu moyen avec un filet d'huile d'olive."
+                });
+            }
+
+            // Lancement du Saumon au Micro-ondes
+            if (hasSalmon) {
+                const startSalmon = Math.max(1, totalMin - salmonTotalMin - 0.5);
+                steps.push({
+                    atMin: startSalmon,
+                    ustensils: [`Micro-ondes ${mwPower}W`],
+                    title: `Lancer le saumon sous cloche (${mwConfig.label})`,
+                    desc: `Puissance réglée sur ${mwPower} W. Laisse impérativement reposer 1 min 30 porte fermée après la sonnerie : la vapeur finit de cuire le cœur sans dessécher.`
+                });
+            }
+
+            // Ajout Crème liquide / Sauce et retour du poulet à T - 3 min
+            if (hasCream || hasTomato || hasChicken) {
+                const sauceTime = Math.max(1, totalMin - 3);
+                const actions = [];
+                if (hasChicken) actions.push(`remets ${chickenName} dans la poêle`);
+                if (hasCream) actions.push("baisse à feu doux et verse la crème liquide (3-4 c.à.s), sale, poivre et laisse réduire 2 min");
+                else if (hasTomato) actions.push("verse la sauce tomate et laisse mijoter 2 min à feu doux");
+
+                steps.push({
+                    atMin: sauceTime,
+                    ustensils: ['Poêle unique'],
+                    title: "Liaison de la sauce à feu doux (2 min)",
+                    desc: actions.join(", puis ") + "."
+                });
+            }
+
+            // Égouttage à T - 1 min
+            if (hasStarch) {
+                steps.push({
+                    atMin: Math.max(1, totalMin - 1),
+                    ustensils: ['Casserole'],
+                    title: `Égoutter ${starchName} et couper les feux`,
+                    desc: "Ajoute une noisette de beurre ou 1 c.à.c d'huile d'olive pour éviter que les pâtes ne collent."
+                });
+            }
+
+            // T = Total : Dressage
+            steps.push({
+                atMin: totalMin,
+                ustensils: ['À table'],
+                title: "Dressage (Adulte & Enfant séparé)",
+                desc: "Pour ta fille : sers les coquillettes nappées d'un peu de crème d'un côté, les légumes de l'autre et le saumon effeuillé sans peau à part."
+            });
+
+            steps.sort((a, b) => a.atMin - b.atMin);
+            currentTimeline = { totalMin, steps };
+            renderSyncTimeline();
+        }
+
+        let syncRunning = false;
+        let syncElapsedSec = 0;
+        let syncInterval = null;
+
+        function renderSyncTimeline() {
+            document.getElementById('sync-total-badge').textContent = `${currentTimeline.totalMin} min chrono`;
+            const remaining = Math.max(0, currentTimeline.totalMin * 60 - syncElapsedSec);
+            document.getElementById('sync-timer-display').textContent = formatMMSS(remaining);
+
+            const listEl = document.getElementById('sync-timeline');
+            listEl.innerHTML = currentTimeline.steps.map(st => {
+                const stepSec = Math.round(st.atMin * 60);
+                const isDone = syncElapsedSec > 0 && syncElapsedSec >= stepSec;
+                const tMinus = Math.max(0, Math.round((currentTimeline.totalMin - st.atMin) * 10) / 10);
+                const minLabel = st.atMin % 1 === 0 ? `${st.atMin} min` : `${Math.floor(st.atMin)} min 30`;
+                return `
+                    <div class="step-card ${isDone ? 'done' : ''}">
+                        <div class="step-top">
+                            <span class="step-time">T + ${minLabel} (Reste ${tMinus} min)</span>
+                            <div class="step-badges">
+                                ${st.ustensils.map(u => `<span class="ustensil-badge">${u}</span>`).join('')}
+                            </div>
+                        </div>
+                        <div class="step-title">${st.title}</div>
+                        <div class="step-desc">${st.desc}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleSyncTimer() {
+            const btn = document.getElementById('sync-start-btn');
+            if (syncRunning) {
+                clearInterval(syncInterval);
+                syncRunning = false;
+                btn.textContent = "▶ Reprendre";
+            } else {
+                syncRunning = true;
+                btn.textContent = "⏸ Pause";
+                syncInterval = setInterval(() => {
+                    syncElapsedSec++;
+                    currentTimeline.steps.forEach(st => {
+                        if (Math.round(st.atMin * 60) === syncElapsedSec) playChime(840, 2);
+                    });
+                    if (syncElapsedSec >= currentTimeline.totalMin * 60) {
+                        clearInterval(syncInterval);
+                        syncRunning = false;
+                        btn.textContent = "✓ Terminé";
+                        playChime(980, 4);
+                    }
+                    renderSyncTimeline();
+                }, 1000);
+            }
+        }
+
+        function resetSyncTimer() {
+            clearInterval(syncInterval);
+            syncRunning = false;
+            syncElapsedSec = 0;
+            document.getElementById('sync-start-btn').textContent = "▶ Lancer Top Chrono";
+            renderSyncTimeline();
+        }
+
+        async function askGeminiCustomSync() {
+            if (!geminiKey) {
+                toggleModal(true);
+                return;
+            }
+            const out = document.getElementById('ai-sync-output');
+            const btn = document.getElementById('ai-sync-btn');
+            const names = getAllIngredients().filter(i => selectedSyncIds.includes(i.id)).map(i => i.label).join(', ');
+            out.classList.remove('hidden');
+            out.textContent = "Calcul de synchronisation Gemini en cours...";
+            btn.disabled = true;
+            try {
+                const prompt = `Je cuisine avec 1 seule casserole, 1 seule poêle et 1 micro-ondes (paliers 300W, 600W, 900W, 1200W). Ingrédients sélectionnés : ${names} (féculent : ${starchMinutes} min). Ne mets jamais de surgelé dans l'eau des pâtes. Donne un rétroplanning ultra-court étape par étape sans intro.`;
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                out.textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Réponse indisponible.";
+            } catch (e) {
+                out.textContent = "Erreur réseau ou clé API invalide.";
+            }
+            btn.disabled = false;
+        }
+
+        // =========================================================
+        // ONGLET 2 : COMBO MICRO-ONDES (600W) -> FOUR
+        // =========================================================
+        let ovenItems = [
+            { id: 'frites', label: 'Frites', temp: 180, time: 20, crispy: true, selected: true },
+            { id: 'colin', label: 'Filet colin', temp: 210, time: 20, crispy: false, selected: true },
+            { id: 'cabillaud', label: 'Dos cabillaud', temp: 210, time: 28, crispy: false, selected: true },
+            { id: 'saumon_f', label: 'Pavé saumon', temp: 200, time: 18, crispy: false, selected: false },
+            { id: 'nuggets', label: 'Nuggets', temp: 200, time: 15, crispy: true, selected: false },
+            { id: 'gratin', label: 'Gratin', temp: 190, time: 25, crispy: false, selected: false }
+        ];
+
+        function renderOvenTab() {
+            const chipsEl = document.getElementById('oven-chips');
+            chipsEl.innerHTML = '';
+            ovenItems.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = `chip ${item.selected ? 'selected-amber' : ''}`;
+                btn.textContent = item.label;
+                btn.onclick = () => {
+                    item.selected = !item.selected;
+                    if (navigator.vibrate) navigator.vibrate(5);
+                    renderOvenTab();
+                };
+                chipsEl.appendChild(btn);
+            });
+
+            const slidersEl = document.getElementById('oven-sliders-container');
+            slidersEl.innerHTML = '';
+            const active = ovenItems.filter(i => i.selected);
+
+            active.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card halo-blue';
+                card.style.padding = '13px 16px';
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-weight:600; font-size:14px;">${item.label}</span>
+                        <button class="ustensil-badge" style="border:none; cursor:pointer; background:${item.crispy ? 'rgba(255,159,10,0.25)' : 'rgba(255,255,255,0.1)'}; color:${item.crispy ? '#ffd699' : '#fff'};" onclick="toggleOvenCrispy('${item.id}')">
+                            ${item.crispy ? '🍟 Croustillant (0 MO)' : '💧 Préchauffage 600W OK'}
+                        </button>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:12px;">
+                        <div>
+                            <div style="display:flex; justify-content:space-between; color:var(--text-secondary); margin-bottom:4px;">
+                                <span>Temp. paquet</span><strong style="color:#fff;">${item.temp}°C</strong>
+                            </div>
+                            <input type="range" class="custom-slider" min="160" max="230" step="5" value="${item.temp}" oninput="updateOvenVal('${item.id}', 'temp', this.value)">
+                        </div>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; color:var(--text-secondary); margin-bottom:4px;">
+                                <span>Durée paquet</span><strong style="color:#fff;">${item.time} min</strong>
+                            </div>
+                            <input type="range" class="custom-slider" min="8" max="45" step="1" value="${item.time}" oninput="updateOvenVal('${item.id}', 'time', this.value)">
+                        </div>
+                    </div>
+                `;
+                slidersEl.appendChild(card);
+            });
+
+            computeOvenPlan(active);
+        }
+
+        function toggleOvenCrispy(id) {
+            const it = ovenItems.find(i => i.id === id);
+            if (it) it.crispy = !it.crispy;
+            renderOvenTab();
+        }
+
+        function updateOvenVal(id, field, val) {
+            const it = ovenItems.find(i => i.id === id);
+            if (it) it[field] = parseInt(val, 10);
+            renderOvenTab();
+        }
+
+        function addOvenCustom() {
+            const inp = document.getElementById('oven-new-input');
+            const name = inp.value.trim();
+            if (!name) return;
+            const isCrispy = /frite|pané|nugget|pizza|croustill/i.test(name);
+            ovenItems.push({
+                id: 'ov_' + Date.now(),
+                label: name.substring(0, 16),
+                temp: 200,
+                time: 22,
+                crispy: isCrispy,
+                selected: true
+            });
+            inp.value = '';
+            renderOvenTab();
+        }
+
+        function computeOvenPlan(active) {
+            const resCard = document.getElementById('oven-result-card');
+            if (active.length === 0) {
+                resCard.classList.add('hidden');
+                return;
+            }
+            resCard.classList.remove('hidden');
+
+            const avgTemp = active.reduce((s, i) => s + i.temp, 0) / active.length;
+            const targetTemp = Math.round(avgTemp / 5) * 5;
+
+            const crispyItem = active.find(i => i.crispy);
+            let commonMin = 16;
+            if (crispyItem) {
+                commonMin = Math.round(crispyItem.time * (crispyItem.temp / targetTemp));
+            } else {
+                const shortest = active.reduce((m, i) => i.time < m.time ? i : m, active[0]);
+                commonMin = Math.max(12, Math.round(shortest.time * (shortest.temp / targetTemp) * 0.8));
+            }
+
+            document.getElementById('oven-target-temp').textContent = `${targetTemp}°C`;
+            document.getElementById('oven-target-time').textContent = `${commonMin} min`;
+
+            const computed = active.map(item => {
+                const eqOvenMin = item.time * (item.temp / targetTemp);
+                const deficit = eqOvenMin - commonMin;
+                if (item.crispy || deficit <= 1.5) {
+                    return { ...item, mwSec: 0, note: item.crispy ? "Interdit au micro-ondes (ramollit l'amidon) · Direct au four" : "Directement au four sans préchauffage" };
+                }
+                const rawSec = Math.round((deficit / 3.2) * 60);
+                const mwSec = Math.min(300, Math.max(45, Math.round(rawSec / 15) * 15));
+                return {
+                    ...item,
+                    mwSec,
+                    note: mwSec >= 150 ? `À 600 W pendant ${formatMMSS(mwSec)} (retourner à mi-temps)` : `À 600 W pendant ${formatMMSS(mwSec)} sous cloche`
+                };
+            }).sort((a, b) => b.mwSec - a.mwSec);
+
+            const listEl = document.getElementById('oven-steps-list');
+            listEl.innerHTML = computed.map((c, idx) => `
+                <div class="step-card">
+                    <div class="step-top">
+                        <span class="step-time">${idx + 1}. ${c.label}</span>
+                        <span class="ustensil-badge" style="color:${c.mwSec > 0 ? '#4cd964' : 'var(--text-secondary)'};">
+                            ${c.mwSec > 0 ? `MO 600W : ${formatMMSS(c.mwSec)}` : '00:00 MO'}
+                        </span>
+                    </div>
+                    <div class="step-desc">${c.note}, puis enfourner ${commonMin} min à ${targetTemp}°C.</div>
+                </div>
+            `).join('');
+        }
+
+        // =========================================================
+        // ONGLET 3 : OEUF PARFAIT
+        // =========================================================
+        const eggStates = [
+            { id: 'coque', label: '🥄 Coque', times: { S: 165, M: 185, L: 205, XL: 225 }, tip: "Eau frémissante. Écaler le chapeau immédiatement." },
+            { id: 'mollet', label: '🟠 Mollet', times: { S: 330, M: 365, L: 395, XL: 425 }, tip: "Eau bouillante, puis plonger 2 min dans l'eau glacée avant d'écaler." },
+            { id: 'confit', label: '🍜 Mi-cuit', times: { S: 420, M: 455, L: 490, XL: 525 }, tip: "Jaune confit crémeux qui ne coule pas (parfait avec pâtes ou riz)." },
+            { id: 'dur', label: '⚪ Dur', times: { S: 540, M: 585, L: 630, XL: 675 }, tip: "Eau frémissante, refroidir aussitôt à l'eau froide." },
+            { id: 'plat', label: '🍳 Au plat', times: { S: 180, M: 195, L: 210, XL: 225 }, tip: "Poêle à feu doux-moyen, saler uniquement le blanc." }
+        ];
+
+        let curEggState = 'mollet';
+        let curEggSize = 'M';
+        let curEggOrigin = 'frigo';
+        let curEggCount = 2;
+        let eggRemainSec = 365;
+        let eggRunning = false;
+        let eggInterval = null;
+
+        function computeEggTarget() {
+            const st = eggStates.find(s => s.id === curEggState);
+            let sec = st.times[curEggSize];
+            if (curEggOrigin === 'ambiant') sec -= 25;
+            if (curEggCount > 2 && curEggState !== 'plat') sec += (curEggCount - 2) * 8;
+            return Math.max(90, sec);
+        }
+
+        function renderEggTab() {
+            const container = document.getElementById('egg-state-chips');
+            container.innerHTML = '';
+            eggStates.forEach(st => {
+                const btn = document.createElement('button');
+                btn.className = `chip ${curEggState === st.id ? 'selected' : ''}`;
+                btn.textContent = st.label;
+                btn.onclick = () => {
+                    curEggState = st.id;
+                    resetEggTimer();
+                    renderEggTab();
+                };
+                container.appendChild(btn);
+            });
+
+            const stObj = eggStates.find(s => s.id === curEggState);
+            document.getElementById('egg-result-title').textContent = stObj.label;
+            document.getElementById('egg-tip-text').textContent = stObj.tip;
+            if (!eggRunning) {
+                eggRemainSec = computeEggTarget();
+                document.getElementById('egg-timer-display').textContent = formatMMSS(eggRemainSec);
+            }
+        }
+
+        function setEggSize(sz) {
+            curEggSize = sz;
+            ['S', 'M', 'L', 'XL'].forEach(s => document.getElementById(`egg-sz-${s}`).classList.toggle('active', s === sz));
+            resetEggTimer();
+            renderEggTab();
+        }
+
+        function setEggOrigin(orig) {
+            curEggOrigin = orig;
+            document.getElementById('egg-orig-frigo').classList.toggle('active', orig === 'frigo');
+            document.getElementById('egg-orig-ambiant').classList.toggle('active', orig === 'ambiant');
+            document.getElementById('egg-temp-label').textContent = orig === 'frigo' ? 'Départ Frigo (4°C)' : 'Départ Ambiant (20°C)';
+            resetEggTimer();
+            renderEggTab();
+        }
+
+        function toggleEggTimer() {
+            const btn = document.getElementById('egg-start-btn');
+            if (eggRunning) {
+                clearInterval(eggInterval);
+                eggRunning = false;
+                btn.textContent = "▶ Reprendre";
+            } else {
+                eggRunning = true;
+                btn.textContent = "⏸ Pause";
+                eggInterval = setInterval(() => {
+                    eggRemainSec--;
+                    document.getElementById('egg-timer-display').textContent = formatMMSS(eggRemainSec);
+                    if (eggRemainSec <= 0) {
+                        clearInterval(eggInterval);
+                        eggRunning = false;
+                        btn.textContent = "✓ Prêt !";
+                        playChime(940, 4);
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetEggTimer() {
+            clearInterval(eggInterval);
+            eggRunning = false;
+            eggRemainSec = computeEggTarget();
+            document.getElementById('egg-timer-display').textContent = formatMMSS(eggRemainSec);
+            document.getElementById('egg-start-btn').textContent = "▶ Démarrer Minuteur";
+        }
+
+        // =========================================================
+        // INITIALISATION AU CHARGEMENT
+        // =========================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            refreshKeyStatus();
+
+            // Crans du curseur Féculents
+            const ticksContainer = document.getElementById('starch-ticks');
+            for (let i = 3; i <= 15; i++) {
+                const t = document.createElement('div');
+                t.className = `tick ${i % 3 === 0 ? 'major' : ''}`;
+                ticksContainer.appendChild(t);
+            }
+
+            const starchSlider = document.getElementById('starch-slider');
+            updateRangeFill(starchSlider);
+            starchSlider.addEventListener('input', (e) => {
+                starchMinutes = parseInt(e.target.value, 10);
+                document.getElementById('starch-time-val').textContent = `${starchMinutes} min`;
+                updateRangeFill(starchSlider);
+                if (navigator.vibrate) navigator.vibrate(5);
+                resetSyncTimer();
+                buildSyncPlan();
+            });
+
+            const eggSlider = document.getElementById('egg-count-slider');
+            updateRangeFill(eggSlider);
+            eggSlider.addEventListener('input', (e) => {
+                curEggCount = parseInt(e.target.value, 10);
+                document.getElementById('egg-count-val').textContent = `${curEggCount} œuf${curEggCount > 1 ? 's' : ''}`;
+                updateRangeFill(eggSlider);
+                if (navigator.vibrate) navigator.vibrate(5);
+                resetEggTimer();
+            });
+
+            renderSyncChips();
+            buildSyncPlan();
+            renderOvenTab();
+            renderEggTab();
+        });
+    </script>
 </body>
 </html>
